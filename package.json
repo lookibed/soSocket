@@ -1,0 +1,7 @@
+{
+    "id": "soSocket",
+    "title": "Hueta",
+    "version": "0.1",
+    "creator": "Andryha & Dark",
+    "description": "Обмен данными напрямую по памяти процесса"
+}
