@@ -23,6 +23,7 @@ handle = pm.process_handle
 def sand_command(command):
     global outData
     global out_cmd_list
+    print(json.dumps(command, ensure_ascii=False, indent=4))
     cmd_line = json.dumps(command)
     # print(cmd_line)
     out_cmd_list += cmd_line + ";"
@@ -134,15 +135,25 @@ with open('hash2.txt', 'r') as file:
     outHashData = file.read()
 out_body_size = len(outData) - len(start_point) - len(end_point)
 out_clear = start_point + "_"*out_body_size + end_point
-print(f"out_clear: {out_clear}")
+# print(f"out_clear: {out_clear}")
 
-in_valid = validator(inData, True)
-# out_valid = validator(outData, False)
+# in_valid = validator(inData, True)
+out_valid = validator(outData, False)
 
 outData = out_clear
-# write_mem("OUT" ,out_valid, outData, out_cuntByte)
+write_mem("OUT" ,out_valid, outData, out_cuntByte)
 while True:
-    read_mem("IN" ,in_valid, inHashData, in_countByte)
-    # write_mem("OUT" ,out_valid, outData, out_cuntByte)
+    # read_mem("IN" ,in_valid, inHashData, in_countByte)
+    time.sleep(13.05)
+    out_cmd = {
+            "com": "GAYCOMMAND",
+            "dt":{
+                "id": time.time(),
+                "x": 9,
+                "y": 1,
+                "z": 1
+            }
+        }
+    sand_command(out_cmd)
+    write_mem("OUT" ,out_valid, outData[:], out_cuntByte)
     
-    time.sleep(0.05)

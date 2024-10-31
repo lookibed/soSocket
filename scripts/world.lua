@@ -11,9 +11,11 @@ HASH = ""
 sand_data_size = 0
 sand_list = {}
 sand_list_str = ""
+
 --получаем данные с сервера
 get_data = ""
 HASH2 = ""
+get_list_str = ""
 local function split(inputstr, sep)
    if sep == nil then
        sep = "%s"  -- Если разделитель не указан, используем пробел
@@ -25,6 +27,7 @@ local function split(inputstr, sep)
    return t
 end
 local function get_command(command)
+   print(json.tostring(command, true))
    local cmd = command.com
    local data = command.dt
    if cmd == "GAYCOMMAND" then
@@ -116,15 +119,22 @@ local function get_masage(data)
    -- если в data есть ;
    if string.find(data, ";") then
 	   -- разбиваем на массив по ; и перебираем каждый
-      local mas = {}
+      local z = 0
       for i in string.gmatch(data, "[^;]+") do
-         table.insert(mas,i)
-         print(i)
-         local cmd_line = string.sub(i,1,#i-1)
-         print("cmd: "..cmd_line)
-         -- конвертируем разбитые строки в json.parse(code: str) -> table
-         local cmd = json.parse(i)
-         get_command(cmd)
+         local start_pos, end_pos = string.find(i, "{")
+         if start_pos then
+            z = z + 1
+            if z == 1 then
+               i = string.sub(i,#start_point+1,#i)
+            end
+            -- print(z.." "..i)
+            local start_pos, end_pos = string.find(get_list_str, i)
+            if not start_pos then
+               get_list_str = get_list_str .. i .. ";"
+               local cmd = json.parse(i)
+               get_command(cmd)
+            end
+         end
       end
    end
 end
@@ -132,17 +142,21 @@ function on_world_open()
    sandHandShake()
    getHandShake()
 end
-
+titi = 0
 function on_world_tick()
    world.set_day_time(0.5) 
    local timi = "time:(" .. tostring(time.uptime()) .. ")"
-   print(sand_data)
+   -- print(sand_data)
    -- -- print(timi)
 
-   if get_data ~= sand_hash(HASH2) then
-      local document = Document.new("core:console")
-      document.log.text = ""
-      console.log(get_data)
+   if titi >= 400 then--get_data ~= sand_hash(HASH2)
+      -- print(get_list_str)
+      get_masage(get_data)
+      -- local document = Document.new("core:console")
+      -- document.log.text = ""
+      -- console.log(get_data)
+   else
+      titi = titi +1
    end
 end
 function on_block_placed(blockid, x, y, z)
