@@ -23,17 +23,24 @@ handle = pm.process_handle
 def sand_command(command):
     global outData
     global out_cmd_list
-    print(json.dumps(command, ensure_ascii=False, indent=4))
+    # print(json.dumps(command, ensure_ascii=False, indent=4))
+    print(f"outCMD: {json.dumps(command)}")
     cmd_line = json.dumps(command)
-    # print(cmd_line)
+    # убираем пробелы в cmd_line
+    cmd_line = cmd_line.replace(" ", "")
     out_cmd_list += cmd_line + ";"
-    # print(out_cmd_list)
-    ostatok = out_body_size - len(out_cmd_list)
-    result = start_point + out_cmd_list + "_"*ostatok + end_point
-    # print(result)
-    outData = result
+    if out_body_size > len(out_cmd_list):
+        ostatok = out_body_size - len(out_cmd_list)
+        outData = start_point + out_cmd_list + "_"*ostatok + end_point
+    else:
+        print("Ошибка вместимости буфера!")
+        out_cmd_list = ""
+        # outData = out_clear
+        sand_command(command)
+    
 def get_command(command):
-    print(json.dumps(command, ensure_ascii=False, indent=4))
+    # print(json.dumps(command, ensure_ascii=False, indent=4))
+    print(f"inCMD: {json.dumps(command)}")
     cmd = command["com"]
     if cmd == "obp":
         data = command["dt"]
@@ -41,10 +48,10 @@ def get_command(command):
         x = data["x"]
         y = data["y"]
         z = data["z"]
-        print(f"Блок id{id} поставили на X:{x} Y:{y} Z:{z}" )
+        # print(f"Блок id {id} поставили на X:{x} Y:{y} Z:{z}" )
 
         out_cmd = {
-            "cmd": cmd,
+            "com": cmd,
             "dt":{
                 "id": id,
                 "x": x,
@@ -84,8 +91,9 @@ def read_mem(type ,validate_address, HashData, countByte):
         except UnicodeDecodeError as e:
             pass
             # print(f"({n}) Ошибка чтения строки по адресу {i}: {e}")
-    print(f"read_console {type}: {find_console} \n")
+    print(f"read_console {type}: {find_console}")
 def write_mem(type ,validate_address, HashData, countByte):
+    HashData = HashData[:-2]
     byteData = HashData.encode('utf-8')
     find_console = False
     # print(f"\n validate_address: {validate_address}")
@@ -98,7 +106,7 @@ def write_mem(type ,validate_address, HashData, countByte):
             print(f"({n}) Ошибка записи строки по адресу {i}: {e}")
         else:
             find_console = True
-    print(f"write_console {type}: {find_console} \n")
+    print(f"write_console {type}: {find_console}")
 def validator(HashData, in_trig):
     global in_countByte
     global out_cuntByte
@@ -135,25 +143,32 @@ with open('hash2.txt', 'r') as file:
     outHashData = file.read()
 out_body_size = len(outData) - len(start_point) - len(end_point)
 out_clear = start_point + "_"*out_body_size + end_point
-# print(f"out_clear: {out_clear}")
 
-# in_valid = validator(inData, True)
+in_valid = validator(inData, True)
 out_valid = validator(outData, False)
 
+# Записываем в файл signal.txt validate_sucess
+with open('signal.txt', 'w') as file:
+    file.write("validate_success")
 outData = out_clear
 write_mem("OUT" ,out_valid, outData, out_cuntByte)
 while True:
-    # read_mem("IN" ,in_valid, inHashData, in_countByte)
-    time.sleep(13.05)
-    out_cmd = {
-            "com": "GAYCOMMAND",
-            "dt":{
-                "id": time.time(),
-                "x": 9,
-                "y": 1,
-                "z": 1
-            }
-        }
-    sand_command(out_cmd)
-    write_mem("OUT" ,out_valid, outData[:], out_cuntByte)
+    print("tick..")
+    # input("послать GAYCOMMAND..")
+    read_mem("IN" ,in_valid, inHashData, in_countByte)
+    write_mem("OUT" ,out_valid, outData, out_cuntByte)
+    # outData = out_clear
+    print("")
+    time.sleep(0.05)
     
+# out_cmd = {
+#         "com": "GAYCOMMAND",
+#         "dt":{
+#             "id": str(time.time()).split(".")[1],
+#             "x": 9,
+#             "y": 1,
+#             "z": 1
+#         }
+#     }
+# sand_command(out_cmd)
+# print("outData: " + outData)

@@ -16,6 +16,8 @@ sand_list_str = ""
 get_data = ""
 HASH2 = ""
 get_list_str = ""
+validate = ""
+
 local function split(inputstr, sep)
    if sep == nil then
        sep = "%s"  -- Если разделитель не указан, используем пробел
@@ -27,15 +29,17 @@ local function split(inputstr, sep)
    return t
 end
 local function get_command(command)
-   print(json.tostring(command, true))
+   -- print(json.tostring(command, true))
    local cmd = command.com
    local data = command.dt
    if cmd == "GAYCOMMAND" then
-      print("Сервер сообщил вам что вы пидор!")
+      -- print("Сервер сообщил вам что вы пидор!")
    elseif cmd == "obp" then
-      block.place(data.x, data.y, data.z, data.id)
+      -- block.place(data.x, data.y, data.z, data.id)
+      block.set(data.x, data.y, data.z, data.id)
    elseif cmd == "obb" then
-      block.destruct(data.x, data.y, data.z)
+      -- block.destruct(data.x, data.y, data.z)
+      block.set(data.x, data.y, data.z, 0)
    end
 end
 local function generate_hash()
@@ -64,33 +68,35 @@ local function cl_send()
    local buffer = start_point.. body ..end_point
    return buffer
 end
-local function sand_masage(data)
-   local bodyjs = json.tostring(data, false)
-   local body = string.gsub(bodyjs, "%s+", "")
-   
-   -- Добавляем body в таблицу команд
-   sand_list_str = sand_list_str .. body .. ";"
-   local start_cut = string.len(start_point) + string.len(sand_list_str)
-   -- print("start_cut: "..start_cut)
-   local print_size = string.len(clear_msg)
-   -- print("print_size: "..print_size)
-   local buffer_size = string.len(HASH) + string.len(end_point) + string.len(start_point)
-   -- print("buffer size: "..buffer_size)
-   local need_size = string.len(end_point) + start_cut
-   -- print("need size: "..need_size)
-   if print_size > need_size then
-      local ostatok_count = print_size - need_size
-      -- print("ostatok count: "..ostatok_count)
-      local end_cut = ostatok_count + start_cut
-      local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
-      -- print("ostatok: ".. string.len(ostatok))
-      local buffer = start_point .. sand_list_str .. ostatok .. end_point
-      -- print("buffer: "..string.len(buffer))
-      return buffer
-   else
-      print("Ошибка вместимости буфера!")
-      sand_list_str = ""
-      return clear_msg--sand_data
+function sand_masage(data)
+   -- цикл на повторение сообщения 2 раза
+   for i = 1, 3 do
+      local bodyjs = json.tostring(data, false)
+      local body = string.gsub(bodyjs, "%s+", "")
+      
+      -- Добавляем body в таблицу команд
+      sand_list_str = sand_list_str .. body .. ";"
+      local start_cut = string.len(start_point) + string.len(sand_list_str)
+      -- print("start_cut: "..start_cut)
+      local print_size = string.len(clear_msg)
+      -- print("print_size: "..print_size)
+      local buffer_size = string.len(HASH) + string.len(end_point) + string.len(start_point)
+      -- print("buffer size: "..buffer_size)
+      local need_size = string.len(end_point) + start_cut
+      -- print("need size: "..need_size)
+      if print_size > need_size then
+         local ostatok_count = print_size - need_size
+         -- print("ostatok count: "..ostatok_count)
+         local end_cut = ostatok_count + start_cut
+         local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
+         -- print("ostatok: ".. string.len(ostatok))
+         local buffer = start_point .. sand_list_str .. ostatok .. end_point
+         -- print("buffer: "..string.len(buffer))
+         return buffer
+      else
+         -- print("Ошибка вместимости буфера!")
+         sand_list_str = ""
+      end
    end
 end
 local function sand_hash(body)
@@ -139,6 +145,7 @@ local function get_masage(data)
    end
 end
 function on_world_open()
+   signal_path = file.find("signal.txt")
    sandHandShake()
    getHandShake()
 end
@@ -146,17 +153,24 @@ titi = 0
 function on_world_tick()
    world.set_day_time(0.5) 
    local timi = "time:(" .. tostring(time.uptime()) .. ")"
-   -- print(sand_data)
+   print(sand_data)
    -- -- print(timi)
-
-   if titi >= 400 then--get_data ~= sand_hash(HASH2)
-      -- print(get_list_str)
-      get_masage(get_data)
-      -- local document = Document.new("core:console")
-      -- document.log.text = ""
-      -- console.log(get_data)
+   
+   -- print(path)
+   if #validate <= 2 then
+      if titi >= 10 then
+         validate = file.read(signal_path)
+      else
+         titi = titi +1
+      end
    else
-      titi = titi +1
+      file.write(signal_path, "")
+      local document = Document.new("core:console")
+      document.log.text = ""
+      console.log(get_data)
+      get_masage(get_data)
+      -- типа это все что нужно на отправку в этом тике поэтому чистим sand_data 
+      -- sand_data = clear_msg
    end
 end
 function on_block_placed(blockid, x, y, z)
