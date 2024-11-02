@@ -17,6 +17,7 @@ get_data = ""
 HASH2 = ""
 get_list_str = ""
 validate = ""
+out_signal = false
 
 local function split(inputstr, sep)
    if sep == nil then
@@ -76,23 +77,20 @@ function sand_masage(data)
       
       -- Добавляем body в таблицу команд
       sand_list_str = sand_list_str .. body .. ";"
-      local start_cut = string.len(start_point) + string.len(sand_list_str)
-      -- print("start_cut: "..start_cut)
-      local print_size = string.len(clear_msg)
-      -- print("print_size: "..print_size)
-      local buffer_size = string.len(HASH) + string.len(end_point) + string.len(start_point)
+      local start_cut = #start_point + #sand_list_str
       -- print("buffer size: "..buffer_size)
-      local need_size = string.len(end_point) + start_cut
+      local need_size = #end_point + start_cut
       -- print("need size: "..need_size)
-      if print_size > need_size then
-         local ostatok_count = print_size - need_size
+      if sand_data_size > need_size then
+         local ostatok_count = sand_data_size - need_size
          -- print("ostatok count: "..ostatok_count)
          local end_cut = ostatok_count + start_cut
          local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
          -- print("ostatok: ".. string.len(ostatok))
-         local buffer = start_point .. sand_list_str .. ostatok .. end_point
-         -- print("buffer: "..string.len(buffer))
-         return buffer
+         sand_data = start_point .. sand_list_str .. ostatok .. end_point
+         -- -- print("buffer: "..string.len(buffer))
+         -- return buffer
+         break
       else
          -- print("Ошибка вместимости буфера!")
          sand_list_str = ""
@@ -127,15 +125,13 @@ local function get_masage(data)
 	   -- разбиваем на массив по ; и перебираем каждый
       local z = 0
       for i in string.gmatch(data, "[^;]+") do
-         local start_pos, end_pos = string.find(i, "{")
-         if start_pos then
+         if string.find(i, "{") then
             z = z + 1
             if z == 1 then
                i = string.sub(i,#start_point+1,#i)
             end
             -- print(z.." "..i)
-            local start_pos, end_pos = string.find(get_list_str, i)
-            if not start_pos then
+            if not string.find(get_list_str, i) then
                get_list_str = get_list_str .. i .. ";"
                local cmd = json.parse(i)
                get_command(cmd)
@@ -146,6 +142,8 @@ local function get_masage(data)
 end
 function on_world_open()
    signal_path = file.find("signal.txt")
+   local path = file.find("signal2.txt")
+   file.write(path, "world_opan")
    sandHandShake()
    getHandShake()
 end
@@ -155,8 +153,7 @@ function on_world_tick()
    local timi = "time:(" .. tostring(time.uptime()) .. ")"
    print(sand_data)
    -- -- print(timi)
-   
-   -- print(path)
+
    if #validate <= 2 then
       if titi >= 10 then
          validate = file.read(signal_path)
@@ -164,18 +161,23 @@ function on_world_tick()
          titi = titi +1
       end
    else
-      file.write(signal_path, "")
+      if not out_signal then
+         out_signal = true
+         file.write(signal_path, "")
+      end
       local document = Document.new("core:console")
       document.log.text = ""
+      -- get_data = get_data
       console.log(get_data)
       get_masage(get_data)
+      -- collectgarbage("collect")
       -- типа это все что нужно на отправку в этом тике поэтому чистим sand_data 
       -- sand_data = clear_msg
    end
 end
 function on_block_placed(blockid, x, y, z)
    -- sand_data = cl_send()
-   set_block = {
+   local set_block = {
       com = "obp",
       dt = {
          id = blockid,
@@ -184,11 +186,12 @@ function on_block_placed(blockid, x, y, z)
          z = z
       }
    }
-   sand_data = sand_masage(set_block)
+   sand_masage(set_block)
+   
    -- print("on block place")
 end
 function on_block_broken(blockid, x, y, z)
-   del_block = {
+   local del_block = {
       com = "obb",
       dt = {
          id = blockid,
@@ -197,7 +200,9 @@ function on_block_broken(blockid, x, y, z)
          z = z
       }
    }
-   sand_data = sand_masage(del_block)
+   sand_masage(del_block)
 end
-
-
+function on_world_quit()
+   local path = file.find("signal2.txt")
+   file.write(path, "world_quit")
+end
