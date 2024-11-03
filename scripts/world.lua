@@ -10,12 +10,15 @@ sand_data = ""
 HASH = ""
 sand_data_size = 0
 sand_list = {}
+sand_list_size = 0
 sand_list_str = ""
 
 --получаем данные с сервера
 get_data = ""
 HASH2 = ""
 get_list_str = ""
+get_list = {}
+get_list_size = 0
 validate = ""
 out_signal = false
 
@@ -29,8 +32,14 @@ local function split(inputstr, sep)
    end
    return t
 end
+local function pocket_stats()
+   console.log("Server команд: " .. #get_list)
+   console.log("Server команды заняли: "..get_list_size.. " байт")
+   console.log("Client команд: " .. #sand_list)
+   console.log("Client команды заняли: "..#sand_list_str.. " байт")
+end
 local function get_command(command)
-   -- print(json.tostring(command, true))
+   console.log("server --> client: "..json.tostring(command, false))
    local cmd = command.com
    local data = command.dt
    if cmd == "GAYCOMMAND" then
@@ -69,31 +78,36 @@ local function cl_send()
    local buffer = start_point.. body ..end_point
    return buffer
 end
-function sand_masage(data)
+function sand_command(command)
    -- цикл на повторение сообщения 2 раза
+   local bodyjs = json.tostring(command, false)
+   local body = string.gsub(bodyjs, "%s+", "")
+   console.log("server <-- client: "..bodyjs)
    for i = 1, 3 do
-      local bodyjs = json.tostring(data, false)
-      local body = string.gsub(bodyjs, "%s+", "")
-      
-      -- Добавляем body в таблицу команд
-      sand_list_str = sand_list_str .. body .. ";"
-      local start_cut = #start_point + #sand_list_str
-      -- print("buffer size: "..buffer_size)
-      local need_size = #end_point + start_cut
-      -- print("need size: "..need_size)
-      if sand_data_size > need_size then
-         local ostatok_count = sand_data_size - need_size
-         -- print("ostatok count: "..ostatok_count)
-         local end_cut = ostatok_count + start_cut
-         local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
-         -- print("ostatok: ".. string.len(ostatok))
-         sand_data = start_point .. sand_list_str .. ostatok .. end_point
-         -- -- print("buffer: "..string.len(buffer))
-         -- return buffer
-         break
-      else
-         -- print("Ошибка вместимости буфера!")
-         sand_list_str = ""
+      if not sand_list[body] then
+         -- Добавляем body в таблицу команд
+         sand_list_size = sand_data_size + #body + 1
+         sand_list_str = sand_list_str .. body .. ";"
+         local start_cut = #start_point + #sand_list_str
+         console.log("buffer size: "..buffer_size)
+         local need_size = #end_point + start_cut
+         console.log("need size: "..need_size)
+         if sand_data_size > need_size then
+            local ostatok_count = sand_data_size - need_size
+            console.log("ostatok count: "..ostatok_count)
+            table.insert(sand_list, body)
+            sand_list[body] = true
+            local end_cut = ostatok_count + start_cut
+            local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
+            console.log("ostatok: ".. string.len(ostatok))
+            sand_data = start_point .. sand_list_str .. ostatok .. end_point
+            break
+         else
+            console.log("Ошибка вместимости буфера клиента!")
+            sand_list_str = ""
+            sand_list_size = 0
+            sand_list = {}
+         end
       end
    end
 end
@@ -120,21 +134,33 @@ local function getHandShake()
    file.write(path, get_data)
 end
 local function get_masage(data)
-   -- если в data есть ;
    if string.find(data, ";") then
-	   -- разбиваем на массив по ; и перебираем каждый
+      local pattern = "[^;]+"
       local z = 0
-      for i in string.gmatch(data, "[^;]+") do
-         if string.find(i, "{") then
-            z = z + 1
-            if z == 1 then
-               i = string.sub(i,#start_point+1,#i)
-            end
-            -- print(z.." "..i)
-            if not string.find(get_list_str, i) then
-               get_list_str = get_list_str .. i .. ";"
-               local cmd = json.parse(i)
-               get_command(cmd)
+      for chunk in string.gmatch(data, pattern) do
+         z = z + 1
+         local cmd_line = chunk
+         if z == 1 then   
+            cmd_line = string.sub(chunk,#start_point+1,#chunk)
+         end
+         if string.find(cmd_line, "{") then
+            if not get_list[cmd_line] then
+               get_list_size = get_list_size + #cmd_line
+               local need_size = get_list_size + #start_point + #end_point
+               if need_size < sand_data_size then
+                  -- добавляем в список
+                  table.insert(get_list, cmd_line)
+                  get_list[cmd_line] = true
+                  -- console.log(cmd_line)s
+                  local cmd = json.parse(cmd_line)
+                  get_command(cmd)
+               else
+                  console.log("Ошибка вместимости буфера!")
+                  local document = Document.new("core:console")
+                  document.log.text = ""
+                  get_list = {}
+                  get_list_size = 0
+               end
             end
          end
       end
@@ -165,18 +191,12 @@ function on_world_tick()
          out_signal = true
          file.write(signal_path, "")
       end
-      local document = Document.new("core:console")
-      document.log.text = ""
-      -- get_data = get_data
-      console.log(get_data)
+      local Sex_code = "return function(x) return x .. '' end"
+      local func = loadstring(Sex_code)()
       get_masage(get_data)
-      -- collectgarbage("collect")
-      -- типа это все что нужно на отправку в этом тике поэтому чистим sand_data 
-      -- sand_data = clear_msg
    end
 end
 function on_block_placed(blockid, x, y, z)
-   -- sand_data = cl_send()
    local set_block = {
       com = "obp",
       dt = {
@@ -186,8 +206,7 @@ function on_block_placed(blockid, x, y, z)
          z = z
       }
    }
-   sand_masage(set_block)
-   
+   sand_command(set_block)
    -- print("on block place")
 end
 function on_block_broken(blockid, x, y, z)
@@ -200,7 +219,7 @@ function on_block_broken(blockid, x, y, z)
          z = z
       }
    }
-   sand_masage(del_block)
+   sand_command(del_block)
 end
 function on_world_quit()
    local path = file.find("signal2.txt")
