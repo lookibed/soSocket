@@ -89,17 +89,17 @@ function sand_command(command)
          sand_list_size = sand_data_size + #body + 1
          sand_list_str = sand_list_str .. body .. ";"
          local start_cut = #start_point + #sand_list_str
-         console.log("buffer size: "..buffer_size)
+         -- console.log("buffer size: "..buffer_size)
          local need_size = #end_point + start_cut
-         console.log("need size: "..need_size)
+         -- console.log("need size: "..need_size)
          if sand_data_size > need_size then
             local ostatok_count = sand_data_size - need_size
-            console.log("ostatok count: "..ostatok_count)
+            -- console.log("ostatok count: "..ostatok_count)
             table.insert(sand_list, body)
             sand_list[body] = true
             local end_cut = ostatok_count + start_cut
             local ostatok = string.sub(clear_msg, start_cut, end_cut-1)
-            console.log("ostatok: ".. string.len(ostatok))
+            -- console.log("ostatok: ".. string.len(ostatok))
             sand_data = start_point .. sand_list_str .. ostatok .. end_point
             break
          else

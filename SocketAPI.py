@@ -14,6 +14,7 @@ while True:
     outHashData = ""
     in_countByte = 0
     out_cuntByte = 0
+    in_cmd_str = ""
     in_cmd_list = []
     out_cmd_str = ""
     out_cmd_list = []
@@ -40,7 +41,7 @@ while True:
     handle = pm.process_handle
 
     def sand_command(command):
-        global outData, out_cmd_list, out_cmd_str
+        global outData, out_cmd_list, out_cmd_str, out_body_size
         for _ in range(2):
             # print(json.dumps(command, ensure_ascii=False, indent=4))
             print(f"sv --> vc {json.dumps(command)}")
@@ -84,7 +85,8 @@ while True:
             #для теста ставим блок в ответ игроку выше его
             sand_command(out_cmd)
     def read_data(json_strings):
-        global in_cmd_list
+        # print(json_strings)
+        global in_cmd_list, in_cmd_str, in_body_size
         # json_strings = '{"dt":{"id":9,"z":-6,"y":108,"x":-21},"com":"obb"};{"dt":{"id":9,"z":-5,"y":108,"x":-21},"com":"obb"};{"dt":{"id":14,"z":-3,"y":108,"x":-23},"com":"obb"};'
         json_parts = json_strings.strip().split(';')
         for part in json_parts:
@@ -92,9 +94,18 @@ while True:
                 # print(part)
                 command = json.loads(part)
                 # print(slovar)
-                # if command not in in_cmd_list:
-                    # in_cmd_list.append(command)
-                get_command(command)
+                if part not in in_cmd_list:
+                    in_cmd_str += part + ";"
+                    # Ошибка замени out_body_size не!!!
+                    if in_body_size > len(in_cmd_str):
+                        in_cmd_list.append(part)
+                        # print(part)
+                        get_command(command)
+                    else:
+                        print("Ошибка вместимости буфера inData!")
+                        in_cmd_str = ""
+                        in_cmd_list = []
+        # print(in_cmd_list)
     def read_mem(type ,validate_address, HashData, countByte):
         find_console = False
         # print(f"\n validate_address: {validate_address}")
@@ -174,6 +185,7 @@ while True:
         outData = file.read()
         outHashData = file.read()
     out_body_size = len(outData) - len(start_point) - len(end_point)
+    in_body_size = len(inData) - len(start_point) - len(end_point)
     out_clear = start_point + "_"*out_body_size + end_point
 
     step_scan = 0
