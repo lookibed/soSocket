@@ -207,6 +207,7 @@ function on_block_placed(blockid, x, y, z)
       }
    }
    sand_command(set_block)
+   -- core.close_world(true)
    -- print("on block place")
 end
 function on_block_broken(blockid, x, y, z)

@@ -44,7 +44,6 @@ while True:
         global outData, out_cmd_list, out_cmd_str, out_body_size
         for _ in range(2):
             # print(json.dumps(command, ensure_ascii=False, indent=4))
-            print(f"sv --> vc {json.dumps(command)}")
             cmd_line = json.dumps(command)
             # убираем пробелы в cmd_line
             cmd_line = cmd_line.replace(" ", "")
@@ -53,6 +52,7 @@ while True:
                 if out_body_size > len(out_cmd_str):
                     out_cmd_list.append(cmd_line)
                     ostatok = out_body_size - len(out_cmd_str)
+                    print(f"sv --> vc {json.dumps(command)}")
                     outData = start_point + out_cmd_str + "_"*ostatok + end_point
                     break
                 else:
@@ -222,16 +222,3 @@ while True:
         # print("")
         time.sleep(0.05)
     
-
-
-# out_cmd = {
-#         "com": "GAYCOMMAND",
-#         "dt":{
-#             "id": str(time.time()).split(".")[1],
-#             "x": 9,
-#             "y": 1,
-#             "z": 1
-#         }
-#     }
-# sand_command(out_cmd)
-# print("outData: " + outData)
