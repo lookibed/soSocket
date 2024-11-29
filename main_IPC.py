@@ -1,6 +1,12 @@
 import pymem
 import time
 import json
+from coSocket import ThreadedSocketClient  # Импортируем класс
+import time
+
+# Создаем экземпляр клиента
+client = ThreadedSocketClient()
+client.connect()
 print("soSocketApi run!")
 
 while True:
@@ -40,50 +46,58 @@ while True:
     pm = pymem.Pymem("VoxelCore.exe")
     handle = pm.process_handle
 
-    def sand_command(command):
-        global outData, out_cmd_list, out_cmd_str, out_body_size
-        for _ in range(2):
-            # print(json.dumps(command, ensure_ascii=False, indent=4))
-            cmd_line = json.dumps(command)
-            # убираем пробелы в cmd_line
-            cmd_line = cmd_line.replace(" ", "")
-            if cmd_line not in out_cmd_list:
-                out_cmd_str += cmd_line + ";"
-                if out_body_size > len(out_cmd_str):
-                    out_cmd_list.append(cmd_line)
-                    ostatok = out_body_size - len(out_cmd_str)
-                    print(f"sv --> vc {json.dumps(command)}")
-                    outData = start_point + out_cmd_str + "_"*ostatok + end_point
-                    break
-                else:
-                    print("Ошибка вместимости буфера!")
-                    out_cmd_str = ""
-                    out_cmd_list = []
-                    # outData = out_clear
-                    # sand_command(command)
+    def sand_command():
+        global client, outData, out_cmd_list, out_cmd_str, out_body_size
+        # Проверяем, есть ли новые данные от сервера
+        received_data = client.get_data()
+        if received_data:
+            print("Main Принято:", received_data)
+            for _ in range(2):
+                # print(json.dumps(command, ensure_ascii=False, indent=4))
+                cmd_line = received_data
+                # убираем пробелы в cmd_line
+                cmd_line = cmd_line.replace(" ", "")
+                if cmd_line not in out_cmd_list:
+                    out_cmd_str += cmd_line + ";"
+                    if out_body_size > len(out_cmd_str):
+                        out_cmd_list.append(cmd_line)
+                        ostatok = out_body_size - len(out_cmd_str)
+                        print(f"sv --> vc {received_data}")
+                        outData = start_point + out_cmd_str + "_"*ostatok + end_point
+                        break
+                    else:
+                        print("Ошибка вместимости буфера outData!")
+                        out_cmd_str = ""
+                        out_cmd_list = []
+                        # outData = out_clear
+                        # sand_command(command)
     def get_command(command):
+        global client
         # print(json.dumps(command, ensure_ascii=False, indent=4))
-        print(f"sv <-- vc {json.dumps(command)}")
-        cmd = command["com"]
-        if cmd == "obp":
-            data = command["dt"]
-            id = data["id"]
-            x = data["x"]
-            y = data["y"]
-            z = data["z"]
-            # print(f"Блок id {id} поставили на X:{x} Y:{y} Z:{z}" )
+        txt_sand = f"sv <-- vc {json.dumps(command,ensure_ascii=False)}"
+        print(txt_sand)
+        if client.running:
+            client.send_data(txt_sand)
+        # cmd = command["com"]
+        # if cmd == "obp":
+        #     data = command["dt"]
+        #     id = data["id"]
+        #     x = data["x"]
+        #     y = data["y"]
+        #     z = data["z"]
+        #     # print(f"Блок id {id} поставили на X:{x} Y:{y} Z:{z}" )
 
-            out_cmd = {
-                "com": cmd,
-                "dt":{
-                    "id": id,
-                    "x": x,
-                    "y": y+1,
-                    "z": z
-                }
-            }
-            #для теста ставим блок в ответ игроку выше его
-            sand_command(out_cmd)
+        #     out_cmd = {
+        #         "com": cmd,
+        #         "dt":{
+        #             "id": id,
+        #             "x": x,
+        #             "y": y+1,
+        #             "z": z
+        #         }
+        #     }
+        #     #для теста ставим блок в ответ игроку выше его
+        #     sand_command(out_cmd)
     def read_data(json_strings):
         # print(json_strings)
         global in_cmd_list, in_cmd_str, in_body_size
@@ -192,9 +206,10 @@ while True:
     in_valid = validator(inData, True)
     out_valid = validator(outData, False)
 
-    # Записываем в файл signal.txt validate_sucess
+    print(f"Успешная валидация, сканирование завершено..")
     with open('signal.txt', 'w') as file:
         file.write("validate_success")
+    print(f"Очистка буфера записи..")
     outData = out_clear
     write_mem("OUT" ,out_valid, outData, out_cuntByte)
     timer_value = time.time()
@@ -202,7 +217,7 @@ while True:
     print(f"\n Подключение завершено. Можно играть!")
     while Runtime:
         # print("tick..")
-        # проверка на world_quit мира
+        # Проверка на world_quit
         current_time = time.time()
         if (current_time - timer_value) >= 2:
             with open('signal2.txt', 'r') as file:
@@ -213,6 +228,7 @@ while True:
                 print("Вы вышли из мира. Отключение от процесса VoxelCore.exe")
                 Runtime = False
             timer_value = time.time()
+        sand_command()
         read_status = read_mem("IN" ,in_valid, inHashData, in_countByte)
         write_status = write_mem("OUT" ,out_valid, outData, out_cuntByte)
         if not read_status:

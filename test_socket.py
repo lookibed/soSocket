@@ -1,4 +1,4 @@
-from server2 import ThreadedSocketClient  # Импортируем класс
+from coSocket import ThreadedSocketClient  # Импортируем класс
 import time
 
 # Создаем экземпляр клиента
